@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NCAA Cross Country Championship Draft</title>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #content {
+            max-width: 1200px;
+            margin: auto;
+        }
+        .hidden {
+            display: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        #athlete-table tr:hover {
+            background-color: #f1f1f1;
+            cursor: pointer;
+        }
+        #team-roster {
+            margin-top: 20px;
+        }
+        #all-team-rosters-container h4 {
+            margin-top: 20px;
+        }
+        #all-team-rosters-container table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        #all-team-rosters-container th, #all-team-rosters-container td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="content">
+        <h1>NCAA Cross Country Championship Draft</h1>
+
+        <!-- Team Name Entry -->
+        <div id="team-name-entry">
+            <h2>Enter Your Team Name</h2>
+            <input type="text" id="team-name-input" placeholder="Team Name">
+            <button id="join-draft-btn">Join Draft</button>
+        </div>
+
+        <!-- Waiting for Draft to Start -->
+        <div id="waiting-room" class="hidden">
+            <h2>Waiting for the Draft to Start...</h2>
+            <p>Teams Joined:</p>
+            <ul id="team-list"></ul>
+            <button id="start-draft-btn" class="hidden">Start Draft</button>
+        </div>
+
+        <!-- Draft Interface -->
+        <div id="draft-interface" class="hidden">
+            <h2>Draft Interface</h2>
+
+            <!-- All Team Rosters -->
+            <div id="all-team-rosters-during-draft">
+                <h3>Team Rosters</h3>
+                <div id="all-team-rosters-container">
+                    <!-- All team rosters will be displayed here during the draft -->
+                </div>
+            </div>
+
+            <p id="current-team-label"></p>
+            <p id="next-team-label"></p>
+            <p id="draft-order-label"></p>
+
+            <!-- Search Bar -->
+            <input type="text" id="search-bar" placeholder="Search Athletes">
+
+            <!-- Athlete Table -->
+            <table id="athlete-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Name</th>
+                        <th>Team</th>
+                        <th>Trend</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Athletes will be populated here -->
+                </tbody>
+            </table>
+
+            <!-- Your Team Roster -->
+            <div id="team-roster">
+                <h3>Your Team Roster</h3>
+                <table id="roster-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Name</th>
+                            <th>Team</th>
+                            <th>Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Roster will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Draft Results -->
+        <div id="draft-results" class="hidden">
+            <h2>Draft Results</h2>
+            <h3>Team Rosters</h3>
+            <div id="all-team-rosters">
+                <!-- All team rosters will be displayed here -->
+            </div>
+            <h3>Projected Team Rankings</h3>
+            <table id="projected-rankings-table">
+                <thead>
+                    <tr>
+                        <th>Team</th>
+                        <th>Points</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Projected rankings will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- JavaScript code -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
