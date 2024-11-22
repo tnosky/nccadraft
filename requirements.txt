@@ -3,4 +3,4 @@ Flask-SocketIO
 eventlet
 pandas
 whitenoise
-gunicorn
+gunicorn==20.1.0
