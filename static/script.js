@@ -62,13 +62,13 @@ $(document).ready(function () {
     }
 
     function updateTeamList(teams) {
-            teamList.empty();
-            teams.forEach(function (team) {
-                teamList.append('<li>' + team + '</li>');
-            });
-        }
+        teamList.empty();
+        teams.forEach(function (team) {
+            teamList.append('<li>' + team + '</li>');
+        });
+    }
 
-        function updateDraftInterface(state) {
+    function updateDraftInterface(state) {
         draftStarted = state.draft_started;
         availableAthletes = state.available_athletes || [];
         allTeamRosters = state.team_rosters || {};
