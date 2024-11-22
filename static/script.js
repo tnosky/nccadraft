@@ -61,12 +61,29 @@ $(document).ready(function () {
         }
     }
 
+    function addKickButtonForHost(teamName) {
+        // Add a "Kick" button next to each team name for the host
+        if (userState.is_host) {
+            return `<button class="kick-team-btn" data-team="${teamName}">Kick</button>`;
+        }
+        return '';
+    }
+
     function updateTeamList(teams) {
         teamList.empty();
         teams.forEach(function (team) {
-            teamList.append('<li>' + team + '</li>');
+            teamList.append(
+                `<li>${team} ${addKickButtonForHost(team)}</li>`
+            );
+        });
+
+        // Attach click event for kicking teams
+        $('.kick-team-btn').click(function () {
+            const teamName = $(this).data('team');
+            socket.emit('kick_team', { team_name: teamName });
         });
     }
+
 
     function updateDraftInterface(state) {
         draftStarted = state.draft_started;
@@ -75,28 +92,32 @@ $(document).ready(function () {
         currentTeam = state.current_team;
         nextTeam = state.next_team;
 
-        // Restore isMyTurn based on the current team and user's team name
         isMyTurn = currentTeam === state.team_name;
 
-        // Update UI elements
-        currentTeamLabel.text('Current Team: ' + (currentTeam || 'None'));
+        const userIndex = state.draft_order.indexOf(state.team_name);
+        const currentIndex = state.draft_order.indexOf(currentTeam);
+        const picksAway = currentIndex > userIndex ? currentIndex - userIndex : userIndex - currentIndex;
+
+        // Update dynamic pick notifications
+        if (isMyTurn) {
+            currentTeamLabel.text('It is Your Pick!');
+        } else if (picksAway === 1) {
+            currentTeamLabel.text('You are picking next.');
+        } else {
+            currentTeamLabel.text(`You are ${picksAway} picks away.`);
+        }
+
         nextTeamLabel.text('Next Team: ' + (nextTeam || 'None'));
         draftOrderLabel.text('Draft Order: ' + (state.draft_order || []).join(', '));
 
-        // Update athlete table and team roster
         updateAthleteTable();
         if (state.team_name) {
             teamRoster = allTeamRosters[state.team_name] || [];
             updateRosterTable();
         }
-
-        // Update all team rosters
         updateAllTeamRosters();
     }
-    // Real-time search bar filtering
-    searchBar.on('input', function () {
-        updateAthleteTable();
-    });
+
     function updateAthleteTable() {
         var searchTerm = searchBar.val().toLowerCase(); // Get the search term and make it lowercase
         athleteTableBody.empty(); // Clear the table before populating it again
@@ -238,6 +259,21 @@ $(document).ready(function () {
 
         displayAllTeamRosters(data.team_rosters);
         displayProjectedRankings(data.projected_rankings);
+    });
+
+    socket.on('draft_results', function (data) {
+        draftInterface.addClass('hidden');
+        draftResults.removeClass('hidden');
+
+        displayAllTeamRosters(data.team_rosters);
+        displayProjectedRankings(data.projected_rankings);
+
+        // Show download button
+        const downloadButton = $('<button>Download Rosters</button>');
+        downloadButton.click(function () {
+            window.location.href = '/download_rosters';
+        });
+        draftResults.append(downloadButton);
     });
 
     function makePick(athleteName) {

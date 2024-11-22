@@ -7,6 +7,8 @@ import pandas as pd
 import random
 import uuid
 import os
+import csv
+from flask import send_file
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '11jWaUjKXGmi69szW9FE9rOcGr3eECauNF8YeCHC5Rc')
@@ -106,6 +108,42 @@ def handle_join_draft(data):
     emit('joined_draft', {"team_name": team_name, "user_id": user_id, "is_host": user_id == host_id})
     emit('update_teams', {"teams": teams}, broadcast=True)
 
+@app.route('/download_rosters', methods=['GET'])
+def download_rosters():
+    if not draft_started:
+        return {"error": "Draft has not started yet."}, 400
+
+    # Write rosters to a CSV file
+    filepath = 'team_rosters.csv'
+    with open(filepath, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['Team', 'Rank', 'Name', 'Original Team', 'Trend'])
+        for team, roster in team_rosters.items():
+            for athlete in roster:
+                writer.writerow([team, athlete['Rank'], athlete['Name'], athlete['Team'], athlete['Trend']])
+
+    return send_file(filepath, as_attachment=True)
+
+@socketio.on('kick_team')
+def handle_kick_team(data):
+    global teams, team_rosters, draft_order, pick_order
+
+    user_id = session.get('user_id')
+    if user_id != host_id:
+        emit('error', {'message': 'Only the host can kick teams.'})
+        return
+
+    team_name = data.get('team_name')
+    if team_name in teams:
+        teams.remove(team_name)
+        team_rosters.pop(team_name, None)
+        draft_order = [team for team in draft_order if team != team_name]
+        pick_order = [team for team in pick_order if team != team_name]
+
+        emit('update_teams', {"teams": teams}, broadcast=True)
+        send_state_update()
+    else:
+        emit('error', {'message': f'Team {team_name} not found.'})
 
 @socketio.on('start_draft')
 def handle_start_draft():

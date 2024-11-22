@@ -45,6 +45,9 @@
         <div id="draft-interface" class="hidden">
             <h2>Draft Interface</h2>
 
+            <!-- Pick Notifications -->
+            <p id="current-pick-notification" style="font-weight: bold; color: red;"></p>
+
             <!-- All Team Rosters -->
             <div id="all-team-rosters-during-draft">
                 <h3>Team Rosters</h3>
@@ -113,11 +116,14 @@
                     <!-- Projected rankings will be populated here -->
                 </tbody>
             </table>
+
+            <!-- CSV Download Button -->
+            <button id="download-rosters-btn">Download Rosters as CSV</button>
         </div>
     </div>
 </body>
 <style>
-    /* Reverted CSS for simpler layout */
+    /* Clean layout with reverted CSS */
     body {
         font-family: Arial, sans-serif;
         margin: 0;
@@ -175,6 +181,11 @@
 
     #team-roster, #all-team-rosters-container {
         margin-top: 20px;
+    }
+
+    #current-pick-notification {
+        margin-top: 10px;
+        font-size: 16px;
     }
 </style>
 </html>
