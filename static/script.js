@@ -103,17 +103,21 @@ $(document).ready(function () {
                 row.append('<td>' + athlete.Name + '</td>');
                 row.append('<td>' + athlete.Team + '</td>');
                 row.append('<td>' + athlete.Trend + '</td>');
+
                 if (isMyTurn) {
-                    row.click(function () {
+                    // Add click and touch event listeners for mobile compatibility
+                    row.on('click touchend', function () {
                         if (confirm('Select ' + athlete.Name + '?')) {
                             makePick(athlete.Name);
                         }
                     });
                 }
+
                 athleteTableBody.append(row);
             }
         });
     }
+
 
     function updateRosterTable() {
         rosterTableBody.empty();
