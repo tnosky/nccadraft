@@ -93,7 +93,10 @@ $(document).ready(function () {
         // Update all team rosters
         updateAllTeamRosters();
     }
-
+    // Real-time search bar filtering
+    searchBar.on('input', function () {
+        updateAthleteTable();
+    });
     function updateAthleteTable() {
         var searchTerm = searchBar.val().toLowerCase(); // Get the search term and make it lowercase
         athleteTableBody.empty(); // Clear the table before populating it again
