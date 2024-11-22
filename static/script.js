@@ -121,12 +121,15 @@ $(document).ready(function () {
         updateAllTeamRosters();
     }
 
+    searchBar.on('input', function () {
+        updateAthleteTable();
+    });
 
     function updateAthleteTable() {
-        var searchTerm = searchBar.val().toLowerCase(); // Get the search term and make it lowercase
-        athleteTableBody.empty(); // Clear the table before populating it again
+        var searchTerm = searchBar.val().toLowerCase(); // Get the search term
+        athleteTableBody.empty(); // Clear existing rows
 
-        // Filter athletes based on search term
+        // Filter athletes by Name or Team
         availableAthletes.forEach(function (athlete) {
             if (
                 athlete.Name.toLowerCase().includes(searchTerm) || // Match name
@@ -138,7 +141,7 @@ $(document).ready(function () {
                 row.append('<td>' + athlete.Team + '</td>');
                 row.append('<td>' + athlete.Trend + '</td>');
 
-                // Add click/touch event for selecting an athlete
+                // Allow selection if it's the user's turn
                 if (isMyTurn) {
                     row.on('click touchend', function () {
                         if (confirm('Select ' + athlete.Name + '?')) {
@@ -147,10 +150,11 @@ $(document).ready(function () {
                     });
                 }
 
-                athleteTableBody.append(row); // Add the row to the table body
+                athleteTableBody.append(row); // Add the row to the table
             }
         });
     }
+
 
 
 
@@ -194,10 +198,12 @@ $(document).ready(function () {
                 );
             });
             table.append(tbody);
+
             container.append('<h4>' + team + '</h4>');
             container.append(table);
         }
     }
+
 
     // Join Draft
     joinDraftBtn.click(function () {
@@ -296,9 +302,17 @@ $(document).ready(function () {
 
     function makePick(athleteName) {
         if (isMyTurn) {
-            socket.emit('make_pick', { athlete_name: athleteName });
+            socket.emit('make_pick', { athlete_name: athleteName }, function (response) {
+                if (response.success) {
+                    allTeamRosters = response.team_rosters;
+                    updateAllTeamRosters();
+                } else {
+                    alert(response.error);
+                }
+            });
         }
     }
+
 
     function displayAllTeamRosters(teamRosters) {
         allTeamRostersDiv.empty();
