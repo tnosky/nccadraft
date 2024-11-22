@@ -146,10 +146,15 @@ $(document).ready(function () {
     });
 
     socket.on('joined_draft', function (data) {
-        teamNameEntry.addClass('hidden');
-        waitingRoom.removeClass('hidden');
-        updateTeamList(data.teams);
-    });
+    $('#team-name-entry').addClass('hidden');
+    $('#waiting-room').removeClass('hidden');
+    updateTeamList(data.teams);
+
+    if (data.is_host) {
+        $('#start-draft-btn').removeClass('hidden'); // Show "Start Draft" button for host
+    }
+});
+
 
     socket.on('update_teams', function (data) {
         updateTeamList(data.teams);
