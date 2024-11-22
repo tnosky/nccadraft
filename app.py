@@ -1,7 +1,7 @@
 # app.py
 
 import eventlet
-eventlet.monkey_patch()  # Must be called before any other imports
+eventlet.monkey_patch()  # This must be called before any other imports
 
 from flask import Flask, render_template, session
 from flask_socketio import SocketIO, emit
@@ -151,7 +151,8 @@ def auto_pick(team_name):
         if current_pick_timer:
             current_pick_timer.cancel()
             current_pick_timer = None
-        emit('auto_pick', {'team_name': team_name, 'athlete': athlete}, broadcast=True)
+        # Use socketio.emit instead of emit
+        socketio.emit('auto_pick', {'team_name': team_name, 'athlete': athlete}, broadcast=True)
         send_state_update()
     else:
         # No athletes left
@@ -161,6 +162,7 @@ def auto_pick(team_name):
             current_pick_timer.cancel()
             current_pick_timer = None
         send_state_update()
+
 
 
 @socketio.on('make_pick')
