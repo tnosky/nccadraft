@@ -6,8 +6,6 @@ from flask_socketio import SocketIO, emit
 import pandas as pd
 import random
 import os
-import gevent
-import gevent-websocket
 from datetime import timedelta
 
 app = Flask(__name__)
@@ -15,7 +13,7 @@ app.config['SECRET_KEY'] = os.environ.get('11jWaUjKXGmi69szW9FE9rOcGr3eECauNF8Ye
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
 # Set manage_session=True to enable session management in Socket.IO
-socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode='eventlet', manage_session=True, cors_allowed_origins="*")
 
 # Load athlete data
 athletes_df = pd.read_csv('Individual_Rankings.csv')

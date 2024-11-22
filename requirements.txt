@@ -4,5 +4,3 @@ eventlet
 pandas
 whitenoise
 gunicorn
-gevent
-gevent-websocket
