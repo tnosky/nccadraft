@@ -1,7 +1,3 @@
-# app.config['SECRET_KEY'] = os.environ.get('11jWaUjKXGmi69szW9FE9rOcGr3eECauNF8YeCHC5Rc', 'RerBcfpnSMIUJX--SODVH0yU0HOv1kTL1iIU2gwaKuE')
-
-# app.py
-
 import eventlet
 eventlet.monkey_patch()  # Must be called before any other imports
 
