@@ -41,11 +41,12 @@
             <button id="start-draft-btn" class="hidden">Start Draft</button>
         </div>
 
+        <!-- Draft Interface -->
         <div id="draft-interface" class="hidden">
             <h2>Draft Interface</h2>
 
-            <!-- Picks Away Information -->
-            <p id="picks-away-label"></p>
+            <!-- Pick Notifications -->
+            <p id="picks-away-label" style="font-weight: bold; color: red;"></p>
 
             <!-- Current and Next Team -->
             <p id="current-team-label"></p>
@@ -54,8 +55,10 @@
             <!-- Draft Order -->
             <p id="draft-order-label"></p>
 
-            <!-- Athlete Table -->
+            <!-- Search Bar -->
             <input type="text" id="search-bar" placeholder="Search Athletes">
+
+            <!-- Athlete Table -->
             <table id="athlete-table">
                 <thead>
                     <tr>
@@ -88,7 +91,6 @@
                 </table>
             </div>
         </div>
-
 
         <!-- Draft Results -->
         <div id="draft-results" class="hidden">
@@ -176,9 +178,10 @@
         margin-top: 20px;
     }
 
-    #current-pick-notification {
+    #picks-away-label {
         margin-top: 10px;
         font-size: 16px;
+        font-weight: bold;
     }
 </style>
 </html>
