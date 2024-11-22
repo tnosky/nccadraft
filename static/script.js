@@ -156,12 +156,8 @@ $(document).ready(function() {
 
         // Update pick timer
         if (currentTeam) {
-            var pickStartTime = data.pick_start_time;
-            if (pickStartTime) {
-                var currentTime = Date.now() / 1000;
-                pickTimeRemaining = Math.max(0, Math.ceil(60 - (currentTime - pickStartTime)));
-                startPickTimer();
-            }
+            pickTimeRemaining = data.pick_time_remaining;
+            startPickTimer();
         } else {
             // Draft is over
             stopPickTimer();
@@ -321,6 +317,7 @@ $(document).ready(function() {
             updatePickTimerDisplay();
         }, 1000);
     }
+
 
     function stopPickTimer() {
         if (pickTimerInterval) {

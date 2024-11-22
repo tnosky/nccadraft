@@ -9,10 +9,12 @@ import pandas as pd
 import random
 import os
 import time
+from datetime import timedelta
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_secret_key')
-app.config['PERMANENT_SESSION_LIFETIME'] = eventlet.timeout.Timeout
+app.config['SECRET_KEY'] = os.environ.get('11jWaUjKXGmi69szW9FE9rOcGr3eECauNF8YeCHC5Rc', 'RerBcfpnSMIUJX--SODVH0yU0HOv1kTL1iIU2gwaKuE')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+
 
 # Set manage_session=True to enable session management in Socket.IO
 socketio = SocketIO(app, async_mode='eventlet', manage_session=True, cors_allowed_origins="*")
@@ -109,30 +111,29 @@ def send_state_update():
         next_team = pick_order[current_pick_index + 1] if current_pick_index + 1 < len(pick_order) else None
         if pick_start_time is None:
             pick_start_time = time.time()
+            # Start pick timer for current team
+            if current_pick_timer:
+                current_pick_timer.cancel()
+            current_pick_timer = eventlet.spawn_after(60, auto_pick, current_team)
+        pick_time_elapsed = time.time() - pick_start_time
+        pick_time_remaining = max(0, 60 - int(pick_time_elapsed))
     else:
         current_team = None
         next_team = None
         pick_start_time = None
+        pick_time_remaining = 0
+    # Send state to all clients
     emit('state_update', {
         'team_rosters': team_rosters,
         'available_athletes': available_athletes,
         'current_team': current_team,
         'next_team': next_team,
-        'pick_start_time': pick_start_time,
+        'pick_time_remaining': pick_time_remaining,
         'current_pick_index': current_pick_index,
         'pick_order': pick_order
     }, broadcast=True)
 
-    if current_team:
-        # Start pick timer for current team
-        if current_pick_timer:
-            current_pick_timer.cancel()
-        current_pick_timer = eventlet.spawn_after(60, auto_pick, current_team)
-    else:
-        # Draft is over
-        if current_pick_timer:
-            current_pick_timer.cancel()
-            current_pick_timer = None
+
 
 def auto_pick(team_name):
     global current_pick_index, current_pick_timer, pick_start_time
@@ -147,14 +148,22 @@ def auto_pick(team_name):
         team_rosters[team_name].append(athlete)
         current_pick_index += 1
         pick_start_time = None
+        if current_pick_timer:
+            current_pick_timer.cancel()
+            current_pick_timer = None
         emit('auto_pick', {'team_name': team_name, 'athlete': athlete}, broadcast=True)
         send_state_update()
     else:
         # No athletes left
         current_pick_index += 1
         pick_start_time = None
+        if current_pick_timer:
+            current_pick_timer.cancel()
+            current_pick_timer = None
         send_state_update()
 
+
+@socketio.on('make_pick')
 @socketio.on('make_pick')
 def handle_make_pick(data):
     global current_pick_index, current_pick_timer, pick_start_time
@@ -182,6 +191,7 @@ def handle_make_pick(data):
         send_state_update()
     else:
         emit('error', {'message': 'Athlete not available.'})
+
 
 @socketio.on('get_draft_results')
 def handle_get_draft_results():
