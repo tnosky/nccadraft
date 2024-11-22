@@ -51,6 +51,7 @@ $(document).ready(function () {
                 draftInterface.removeClass('hidden');
             }
         }
+
         updateTeamList(state.teams || []);
         updateDraftInterface(state);
 
@@ -61,18 +62,21 @@ $(document).ready(function () {
     }
 
     function updateTeamList(teams) {
-        teamList.empty();
-        teams.forEach(function (team) {
-            teamList.append('<li>' + team + '</li>');
-        });
-    }
+            teamList.empty();
+            teams.forEach(function (team) {
+                teamList.append('<li>' + team + '</li>');
+            });
+        }
 
-    function updateDraftInterface(state) {
+        function updateDraftInterface(state) {
         draftStarted = state.draft_started;
         availableAthletes = state.available_athletes || [];
         allTeamRosters = state.team_rosters || {};
         currentTeam = state.current_team;
         nextTeam = state.next_team;
+
+        // Restore isMyTurn based on the current team and user's team name
+        isMyTurn = currentTeam === state.team_name;
 
         // Update UI elements
         currentTeamLabel.text('Current Team: ' + (currentTeam || 'None'));
