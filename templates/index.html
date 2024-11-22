@@ -54,19 +54,6 @@
             border: 1px solid #ddd;
             padding: 8px;
         }
-        /* New styles for larger text */
-        #current-team-label, #next-team-label, #pick-timer, #pick-status {
-            font-size: 1.5em;
-            font-weight: bold;
-        }
-        #draft-order-label {
-            font-size: 1.2em;
-        }
-        .kick-btn {
-            margin-left: 10px;
-            color: red;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -100,16 +87,12 @@
                 </div>
             </div>
 
-            <div id="draft-info">
-                <p id="current-team-label"></p>
-                <p id="next-team-label"></p>
-                <p id="pick-status"></p>
-                <p id="pick-timer"></p>
-                <p id="draft-order-label"></p>
-            </div>
+            <p id="current-team-label"></p>
+            <p id="next-team-label"></p>
+            <p id="draft-order-label"></p>
 
             <!-- Search Bar -->
-            <input type="text" id="search-bar" placeholder="Search Athletes or Teams">
+            <input type="text" id="search-bar" placeholder="Search Athletes">
 
             <!-- Athlete Table -->
             <table id="athlete-table">

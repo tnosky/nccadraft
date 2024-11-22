@@ -12,9 +12,6 @@ $(document).ready(function() {
     var currentTeam = null;
     var nextTeam = null;
     var draftStarted = false;
-    var isModerator = false;
-    var pickTimerInterval = null;
-    var pickTimeRemaining = 0;
 
     // Elements
     var teamNameEntry = $('#team-name-entry');
@@ -32,9 +29,6 @@ $(document).ready(function() {
     var searchBar = $('#search-bar');
     var athleteTableBody = $('#athlete-table tbody');
     var rosterTableBody = $('#roster-table tbody');
-
-    var pickTimerDisplay = $('#pick-timer');
-    var pickStatusDisplay = $('#pick-status');
 
     var draftResults = $('#draft-results');
     var allTeamRostersDiv = $('#all-team-rosters');
@@ -64,11 +58,6 @@ $(document).ready(function() {
     // On successful join
     socket.on('joined_draft', function(data) {
         teamNameEntry.addClass('hidden');
-        teamName = data.team_name;
-        isModerator = data.moderator;
-        if (isModerator) {
-            startDraftBtn.removeClass('hidden');
-        }
         waitingRoom.removeClass('hidden');
     });
 
@@ -76,6 +65,7 @@ $(document).ready(function() {
     socket.on('rejoined_draft', function(data) {
         teamNameEntry.addClass('hidden');
         draftStarted = data.draft_started;
+
         if (draftStarted) {
             waitingRoom.addClass('hidden');
             draftInterface.removeClass('hidden');
@@ -87,29 +77,14 @@ $(document).ready(function() {
     // Update Team List
     socket.on('update_teams', function(data) {
         var teams = data.teams;
-        var moderatorName = data.moderator;
         teamList.empty();
         teams.forEach(function(team) {
-            var listItem = $('<li>' + team + '</li>');
-            if (isModerator && team !== teamName) {
-                // Add kick button if current user is moderator
-                var kickButton = $('<button class="kick-btn" data-team="' + team + '">Kick</button>');
-                listItem.append(' ').append(kickButton);
-            }
-            teamList.append(listItem);
+            teamList.append('<li>' + team + '</li>');
         });
         if (teams.length > 1 && !draftStarted) {
-            if (isModerator) {
+            if (teamName === teams[0]) {
                 startDraftBtn.removeClass('hidden');
             }
-        }
-    });
-
-    // Kick team (only available to moderator)
-    teamList.on('click', '.kick-btn', function() {
-        var teamToKick = $(this).data('team');
-        if (confirm('Are you sure you want to kick ' + teamToKick + '?')) {
-            socket.emit('kick_team', {'team_name': teamToKick});
         }
     });
 
@@ -134,8 +109,6 @@ $(document).ready(function() {
         allTeamRosters = data.team_rosters;
         currentTeam = data.current_team;
         nextTeam = data.next_team;
-        current_pick_index = data.current_pick_index;
-        pickOrder = data.pick_order;
 
         // Update current and next team labels
         currentTeamLabel.text('Current Team: ' + (currentTeam || 'Draft Completed'));
@@ -154,29 +127,10 @@ $(document).ready(function() {
         // Update all team rosters at the top
         updateAllTeamRosters();
 
-        // Update pick timer
-        if (currentTeam) {
-            pickTimeRemaining = data.pick_time_remaining;
-            startPickTimer();
-        } else {
-            // Draft is over
-            stopPickTimer();
-        }
-
-        // Display message about how many picks away the user is
-        updatePickStatus();
-
         // If draft is over, show results
         if (!currentTeam) {
             socket.emit('get_draft_results');
         }
-    });
-
-    // Auto Pick Notification
-    socket.on('auto_pick', function(data) {
-        var teamAutoPicked = data.team_name;
-        var athlete = data.athlete;
-        alert(teamAutoPicked + ' did not pick in time. Auto-picked ' + athlete.Name + '.');
     });
 
     // Error Handling
@@ -187,25 +141,8 @@ $(document).ready(function() {
             waitingRoom.addClass('hidden');
             draftInterface.addClass('hidden');
             draftResults.addClass('hidden');
-            teamName = null;
         } else {
             alert(data.message);
-        }
-    });
-
-    // Team Kicked
-    socket.on('team_kicked', function(data) {
-        var kickedTeam = data.team_name;
-        if (teamName === kickedTeam) {
-            alert('You have been kicked from the draft.');
-            // Reset UI
-            teamNameEntry.removeClass('hidden');
-            waitingRoom.addClass('hidden');
-            draftInterface.addClass('hidden');
-            draftResults.addClass('hidden');
-            teamName = null;
-        } else {
-            alert(kickedTeam + ' has been kicked from the draft.');
         }
     });
 
@@ -301,59 +238,5 @@ $(document).ready(function() {
         projectedRankings.forEach(function(item) {
             projectedRankingsTableBody.append('<tr><td>' + item.team + '</td><td>' + item.points + '</td></tr>');
         });
-    }
-
-    function startPickTimer() {
-        if (pickTimerInterval) {
-            clearInterval(pickTimerInterval);
-        }
-        updatePickTimerDisplay();
-        pickTimerInterval = setInterval(function() {
-            pickTimeRemaining -= 1;
-            if (pickTimeRemaining <= 0) {
-                pickTimeRemaining = 0;
-                clearInterval(pickTimerInterval);
-            }
-            updatePickTimerDisplay();
-        }, 1000);
-    }
-
-
-    function stopPickTimer() {
-        if (pickTimerInterval) {
-            clearInterval(pickTimerInterval);
-            pickTimerInterval = null;
-        }
-        pickTimerDisplay.text('');
-    }
-
-    function updatePickTimerDisplay() {
-        pickTimerDisplay.text('Time Remaining: ' + pickTimeRemaining + ' seconds');
-    }
-
-    function updatePickStatus() {
-        if (!draftStarted || !currentTeam) {
-            pickStatusDisplay.text('');
-            return;
-        }
-        if (isMyTurn) {
-            pickStatusDisplay.text("It's Your Turn to Pick!");
-        } else {
-            // Calculate how many picks away
-            var picksAway = 0;
-            for (var i = current_pick_index; i < pickOrder.length; i++) {
-                if (pickOrder[i] === teamName) {
-                    picksAway = i - current_pick_index;
-                    break;
-                }
-            }
-            if (picksAway === 1) {
-                pickStatusDisplay.text('You are Picking Next');
-            } else if (picksAway > 1) {
-                pickStatusDisplay.text('You are ' + picksAway + ' Picks Away');
-            } else {
-                pickStatusDisplay.text('');
-            }
-        }
     }
 });

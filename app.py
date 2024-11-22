@@ -1,20 +1,20 @@
+# app.config['SECRET_KEY'] = os.environ.get('11jWaUjKXGmi69szW9FE9rOcGr3eECauNF8YeCHC5Rc', 'RerBcfpnSMIUJX--SODVH0yU0HOv1kTL1iIU2gwaKuE')
+
 # app.py
 
 import eventlet
-eventlet.monkey_patch()  # This must be called before any other imports
+eventlet.monkey_patch()  # Must be called before any other imports
 
-from flask import Flask, render_template, session
+from flask import Flask, render_template, session, request, redirect, url_for
 from flask_socketio import SocketIO, emit
 import pandas as pd
 import random
 import os
-import time
 from datetime import timedelta
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('11jWaUjKXGmi69szW9FE9rOcGr3eECauNF8YeCHC5Rc', 'RerBcfpnSMIUJX--SODVH0yU0HOv1kTL1iIU2gwaKuE')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-
 
 # Set manage_session=True to enable session management in Socket.IO
 socketio = SocketIO(app, async_mode='eventlet', manage_session=True, cors_allowed_origins="*")
@@ -31,13 +31,15 @@ pick_order = []
 team_rosters = {}
 current_pick_index = 0
 draft_started = False
-moderator = None  # To track the moderator
-current_pick_timer = None  # For the pick timer
-pick_start_time = None  # To track when the pick started
+
+@app.route('/')
+def index():
+    team_name = session.get('team_name')
+    return render_template('index.html', team_name=team_name)
 
 @socketio.on('join_draft')
 def handle_join_draft(data):
-    global teams, moderator
+    global teams
     team_name = data['team_name']
     if team_name in teams:
         emit('error', {'message': 'Team name already taken.'})
@@ -46,12 +48,8 @@ def handle_join_draft(data):
     team_rosters[team_name] = []
     session['team_name'] = team_name
     session.permanent = True
-
-    if moderator is None:
-        moderator = team_name  # Assign the first team as the moderator
-
-    emit('joined_draft', {'team_name': team_name, 'moderator': (team_name == moderator)})
-    emit('update_teams', {'teams': teams, 'moderator': moderator}, broadcast=True)
+    emit('joined_draft', {'team_name': team_name})
+    emit('update_teams', {'teams': teams}, broadcast=True)
 
 @socketio.on('rejoin_draft')
 def handle_rejoin_draft(data):
@@ -64,32 +62,10 @@ def handle_rejoin_draft(data):
     # Update the client with the current state
     send_state_update()
 
-@socketio.on('kick_team')
-def handle_kick_team(data):
-    global teams, team_rosters
-    team_name = data['team_name']
-    moderator_name = session.get('team_name')
-    if moderator_name != moderator:
-        emit('error', {'message': 'Only the moderator can kick teams.'})
-        return
-    if team_name in teams:
-        teams.remove(team_name)
-        team_rosters.pop(team_name, None)
-        emit('team_kicked', {'team_name': team_name}, broadcast=True)
-        emit('update_teams', {'teams': teams, 'moderator': moderator}, broadcast=True)
-    else:
-        emit('error', {'message': 'Team not found.'})
-
 @socketio.on('start_draft')
 def handle_start_draft():
-    global draft_order, pick_order, draft_started, moderator
+    global draft_order, pick_order, draft_started
     if draft_started:
-        return
-    if session.get('team_name') != moderator:
-        emit('error', {'message': 'Only the moderator can start the draft.'})
-        return
-    if len(teams) < 2:
-        emit('error', {'message': 'At least two teams are required to start the draft.'})
         return
     draft_started = True
     draft_order = teams.copy()
@@ -105,70 +81,23 @@ def create_snake_order(teams, rounds):
     return order
 
 def send_state_update():
-    global current_pick_index, current_pick_timer, pick_start_time
+    global current_pick_index
     if current_pick_index < len(pick_order):
         current_team = pick_order[current_pick_index]
         next_team = pick_order[current_pick_index + 1] if current_pick_index + 1 < len(pick_order) else None
-        if pick_start_time is None:
-            pick_start_time = time.time()
-            # Start pick timer for current team
-            if current_pick_timer:
-                current_pick_timer.cancel()
-            current_pick_timer = eventlet.spawn_after(60, auto_pick, current_team)
-        pick_time_elapsed = time.time() - pick_start_time
-        pick_time_remaining = max(0, 60 - int(pick_time_elapsed))
     else:
         current_team = None
         next_team = None
-        pick_start_time = None
-        pick_time_remaining = 0
-    # Send state to all clients
     emit('state_update', {
         'team_rosters': team_rosters,
         'available_athletes': available_athletes,
         'current_team': current_team,
-        'next_team': next_team,
-        'pick_time_remaining': pick_time_remaining,
-        'current_pick_index': current_pick_index,
-        'pick_order': pick_order
+        'next_team': next_team
     }, broadcast=True)
 
-
-
-def auto_pick(team_name):
-    global current_pick_index, current_pick_timer, pick_start_time
-    if current_pick_index >= len(pick_order):
-        return
-    if pick_order[current_pick_index] != team_name:
-        # It's not this team's turn anymore
-        return
-    if available_athletes:
-        athlete = random.choice(available_athletes)
-        available_athletes.remove(athlete)
-        team_rosters[team_name].append(athlete)
-        current_pick_index += 1
-        pick_start_time = None
-        if current_pick_timer:
-            current_pick_timer.cancel()
-            current_pick_timer = None
-        # Use socketio.emit instead of emit
-        socketio.emit('auto_pick', {'team_name': team_name, 'athlete': athlete}, broadcast=True)
-        send_state_update()
-    else:
-        # No athletes left
-        current_pick_index += 1
-        pick_start_time = None
-        if current_pick_timer:
-            current_pick_timer.cancel()
-            current_pick_timer = None
-        send_state_update()
-
-
-
-@socketio.on('make_pick')
 @socketio.on('make_pick')
 def handle_make_pick(data):
-    global current_pick_index, current_pick_timer, pick_start_time
+    global current_pick_index
     team_name = session.get('team_name')
     if not team_name:
         emit('error', {'message': 'You are not part of the draft.'})
@@ -186,14 +115,9 @@ def handle_make_pick(data):
         available_athletes.remove(athlete)
         team_rosters[team_name].append(athlete)
         current_pick_index += 1
-        if current_pick_timer:
-            current_pick_timer.cancel()
-            current_pick_timer = None
-        pick_start_time = None
         send_state_update()
     else:
         emit('error', {'message': 'Athlete not available.'})
-
 
 @socketio.on('get_draft_results')
 def handle_get_draft_results():
@@ -213,11 +137,11 @@ def handle_get_draft_results():
         'projected_rankings': projected_rankings
     })
 
-@app.route('/')
-def index():
-    team_name = session.get('team_name')
-    return render_template('index.html', team_name=team_name)
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, host='0.0.0.0', port=port)
+
+
+
+
+
