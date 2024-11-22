@@ -44,15 +44,20 @@ $(document).ready(function () {
     function initializeUserState(state) {
         if (state.team_name) {
             // User has already joined the draft
-            $('#team-name-entry').addClass('hidden');
-            $('#waiting-room').removeClass('hidden');
+            teamNameEntry.addClass('hidden');
+            waitingRoom.removeClass('hidden');
             if (state.draft_started) {
-                $('#waiting-room').addClass('hidden');
-                $('#draft-interface').removeClass('hidden');
+                waitingRoom.addClass('hidden');
+                draftInterface.removeClass('hidden');
             }
         }
         updateTeamList(state.teams || []);
         updateDraftInterface(state);
+
+        // Show "Start Draft" button if the user is the host
+        if (state.is_host) {
+            startDraftBtn.removeClass('hidden');
+        }
     }
 
     function updateTeamList(teams) {
@@ -113,7 +118,17 @@ $(document).ready(function () {
     function updateRosterTable() {
         rosterTableBody.empty();
         teamRoster.forEach(function (athlete) {
-            rosterTableBody.append('<tr><td>' + athlete.Rank + '</td><td>' + athlete.Name + '</td><td>' + athlete.Team + '</td><td>' + athlete.Trend + '</td></tr>');
+            rosterTableBody.append(
+                '<tr><td>' +
+                    athlete.Rank +
+                    '</td><td>' +
+                    athlete.Name +
+                    '</td><td>' +
+                    athlete.Team +
+                    '</td><td>' +
+                    athlete.Trend +
+                    '</td></tr>'
+            );
         });
     }
 
@@ -127,7 +142,17 @@ $(document).ready(function () {
             table.append('<thead><tr><th>Rank</th><th>Name</th><th>Team</th><th>Trend</th></tr></thead>');
             var tbody = $('<tbody></tbody>');
             roster.forEach(function (athlete) {
-                tbody.append('<tr><td>' + athlete.Rank + '</td><td>' + athlete.Name + '</td><td>' + athlete.Team + '</td><td>' + athlete.Trend + '</td></tr>');
+                tbody.append(
+                    '<tr><td>' +
+                        athlete.Rank +
+                        '</td><td>' +
+                        athlete.Name +
+                        '</td><td>' +
+                        athlete.Team +
+                        '</td><td>' +
+                        athlete.Trend +
+                        '</td></tr>'
+                );
             });
             table.append(tbody);
             container.append('<h4>' + team + '</h4>');
@@ -146,15 +171,14 @@ $(document).ready(function () {
     });
 
     socket.on('joined_draft', function (data) {
-    $('#team-name-entry').addClass('hidden');
-    $('#waiting-room').removeClass('hidden');
-    updateTeamList(data.teams);
+        teamNameEntry.addClass('hidden');
+        waitingRoom.removeClass('hidden');
+        updateTeamList(data.teams);
 
-    if (data.is_host) {
-        $('#start-draft-btn').removeClass('hidden'); // Show "Start Draft" button for host
-    }
-});
-
+        if (data.is_host) {
+            startDraftBtn.removeClass('hidden'); // Show "Start Draft" button for host
+        }
+    });
 
     socket.on('update_teams', function (data) {
         updateTeamList(data.teams);
@@ -216,7 +240,17 @@ $(document).ready(function () {
             table.append('<thead><tr><th>Rank</th><th>Name</th><th>Team</th><th>Trend</th></tr></thead>');
             var tbody = $('<tbody></tbody>');
             roster.forEach(function (athlete) {
-                tbody.append('<tr><td>' + athlete.Rank + '</td><td>' + athlete.Name + '</td><td>' + athlete.Team + '</td><td>' + athlete.Trend + '</td></tr>');
+                tbody.append(
+                    '<tr><td>' +
+                        athlete.Rank +
+                        '</td><td>' +
+                        athlete.Name +
+                        '</td><td>' +
+                        athlete.Team +
+                        '</td><td>' +
+                        athlete.Trend +
+                        '</td></tr>'
+                );
             });
             table.append(tbody);
             allTeamRostersDiv.append('<h4>' + team + '</h4>');

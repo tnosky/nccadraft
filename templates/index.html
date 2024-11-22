@@ -1,60 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NCAA Cross Country Championship Draft</title>
-    <!-- Existing scripts and styles -->
+
+    <!-- Include jQuery -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
     <!-- Socket.IO client script -->
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.min.js"></script>
+
     <!-- Pass team_name to JavaScript -->
     <script>
-        var existingTeamName = {{ team_name|tojson }};
+        var existingTeamName = {{ team_name|tojson if team_name else 'null' }};
     </script>
-    <!-- Your custom JavaScript file -->
+
+    <!-- Link to the custom JavaScript file -->
     <script src="{{ url_for('static', filename='script.js') }}"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        #content {
-            max-width: 1200px;
-            margin: auto;
-        }
-        .hidden {
-            display: none;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-        th, td {
-            padding: 8px;
-            text-align: left;
-        }
-        #athlete-table tr:hover {
-            background-color: #f1f1f1;
-            cursor: pointer;
-        }
-        #team-roster {
-            margin-top: 20px;
-        }
-        #all-team-rosters-container h4 {
-            margin-top: 20px;
-        }
-        #all-team-rosters-container table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        #all-team-rosters-container th, #all-team-rosters-container td {
-            border: 1px solid #ddd;
-            padding: 8px;
-        }
-    </style>
+
+    <!-- Link to the external CSS file -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div id="content">
