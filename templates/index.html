@@ -41,29 +41,21 @@
             <button id="start-draft-btn" class="hidden">Start Draft</button>
         </div>
 
-        <!-- Draft Interface -->
         <div id="draft-interface" class="hidden">
             <h2>Draft Interface</h2>
 
-            <!-- Pick Notifications -->
-            <p id="current-pick-notification" style="font-weight: bold; color: red;"></p>
+            <!-- Picks Away Information -->
+            <p id="picks-away-label"></p>
 
-            <!-- All Team Rosters -->
-            <div id="all-team-rosters-during-draft">
-                <h3>Team Rosters</h3>
-                <div id="all-team-rosters-container">
-                    <!-- All team rosters will be displayed here during the draft -->
-                </div>
-            </div>
-
+            <!-- Current and Next Team -->
             <p id="current-team-label"></p>
             <p id="next-team-label"></p>
+
+            <!-- Draft Order -->
             <p id="draft-order-label"></p>
 
-            <!-- Search Bar -->
-            <input type="text" id="search-bar" placeholder="Search Athletes">
-
             <!-- Athlete Table -->
+            <input type="text" id="search-bar" placeholder="Search Athletes">
             <table id="athlete-table">
                 <thead>
                     <tr>
@@ -96,6 +88,7 @@
                 </table>
             </div>
         </div>
+
 
         <!-- Draft Results -->
         <div id="draft-results" class="hidden">

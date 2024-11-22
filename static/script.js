@@ -13,7 +13,6 @@ $(document).ready(function () {
     var startDraftBtn = $('#start-draft-btn');
 
     var draftInterface = $('#draft-interface');
-    var currentPickNotification = $('#current-pick-notification');
     var currentTeamLabel = $('#current-team-label');
     var nextTeamLabel = $('#next-team-label');
     var draftOrderLabel = $('#draft-order-label');
@@ -24,7 +23,6 @@ $(document).ready(function () {
     var draftResults = $('#draft-results');
     var allTeamRostersDiv = $('#all-team-rosters');
     var projectedRankingsTableBody = $('#projected-rankings-table tbody');
-    var downloadRostersBtn = $('#download-rosters-btn');
 
     var availableAthletes = [];
     var teamRoster = [];
@@ -74,17 +72,16 @@ $(document).ready(function () {
     function updateTeamList(teams) {
         teamList.empty();
         teams.forEach(function (team) {
-            teamList.append(
-                `<li>${team} ${addKickButtonForHost(team)}</li>`
-            );
-        });
-
-        // Attach click event for kicking teams
-        $('.kick-team-btn').click(function () {
-            const teamName = $(this).data('team');
-            socket.emit('kick_team', { team_name: teamName });
+            var listItem = $('<li>' + team + '</li>');
+            if (userState && userState.is_host) {
+                var kickBtn = $('<button class="kick-team-btn" data-team-name="' + team + '">Kick</button>');
+                listItem.append(' ').append(kickBtn);
+            }
+            teamList.append(listItem);
         });
     }
+
+
 
     function updateDraftInterface(state) {
         draftStarted = state.draft_started;
@@ -93,37 +90,43 @@ $(document).ready(function () {
         currentTeam = state.current_team;
         nextTeam = state.next_team;
 
+        // Restore isMyTurn based on the current team and user's team name
         isMyTurn = currentTeam === state.team_name;
 
-        const userIndex = state.draft_order.indexOf(state.team_name);
-        const currentIndex = state.draft_order.indexOf(currentTeam);
-        const picksAway = currentIndex > userIndex ? currentIndex - userIndex : userIndex - currentIndex;
-
-        // Update dynamic pick notifications
-        if (isMyTurn) {
-            currentPickNotification.text('It is Your Pick!');
+        // Calculate picks away
+        var picksAway = state.pick_order.indexOf(state.team_name) - state.current_pick_index;
+        var pickMessage = '';
+        if (picksAway === 0) {
+            pickMessage = 'It is Your Pick!';
         } else if (picksAway === 1) {
-            currentPickNotification.text('You are picking next.');
-        } else {
-            currentPickNotification.text(`You are ${picksAway} picks away.`);
+            pickMessage = 'You are picking next.';
+        } else if (picksAway > 1) {
+            pickMessage = 'You are ' + picksAway + ' picks away.';
         }
 
+        // Update UI elements
         currentTeamLabel.text('Current Team: ' + (currentTeam || 'None'));
         nextTeamLabel.text('Next Team: ' + (nextTeam || 'None'));
-        draftOrderLabel.text('Draft Order: ' + (state.draft_order || []).join(', '));
+        draftOrderLabel.html('<strong>Draft Order:</strong> ' + (state.draft_order || []).join(', '));
+        $('#picks-away-label').text(pickMessage);
 
+        // Update athlete table and team roster
         updateAthleteTable();
         if (state.team_name) {
             teamRoster = allTeamRosters[state.team_name] || [];
             updateRosterTable();
         }
+
+        // Update all team rosters
         updateAllTeamRosters();
     }
 
+
     function updateAthleteTable() {
-        var searchTerm = searchBar.val().toLowerCase(); // Get the search term
+        var searchTerm = searchBar.val().toLowerCase(); // Get the search term and make it lowercase
         athleteTableBody.empty(); // Clear the table before populating it again
 
+        // Filter athletes based on search term
         availableAthletes.forEach(function (athlete) {
             if (
                 athlete.Name.toLowerCase().includes(searchTerm) || // Match name
@@ -135,6 +138,7 @@ $(document).ready(function () {
                 row.append('<td>' + athlete.Team + '</td>');
                 row.append('<td>' + athlete.Trend + '</td>');
 
+                // Add click/touch event for selecting an athlete
                 if (isMyTurn) {
                     row.on('click touchend', function () {
                         if (confirm('Select ' + athlete.Name + '?')) {
@@ -147,6 +151,8 @@ $(document).ready(function () {
             }
         });
     }
+
+
 
     function updateRosterTable() {
         rosterTableBody.empty();
@@ -193,6 +199,7 @@ $(document).ready(function () {
         }
     }
 
+    // Join Draft
     joinDraftBtn.click(function () {
         var teamName = teamNameInput.val().trim();
         if (teamName) {
@@ -216,6 +223,7 @@ $(document).ready(function () {
         updateTeamList(data.teams);
     });
 
+    // Start Draft
     startDraftBtn.click(function () {
         socket.emit('start_draft');
     });
@@ -227,13 +235,48 @@ $(document).ready(function () {
         draftOrderLabel.text('Draft Order: ' + data.draft_order.join(', '));
     });
 
+    // State Update
     socket.on('state_update', function (data) {
         availableAthletes = data.available_athletes;
         allTeamRosters = data.team_rosters;
         currentTeam = data.current_team;
         nextTeam = data.next_team;
 
-        updateDraftInterface(data);
+        currentTeamLabel.text('Current Team: ' + (currentTeam || 'Draft Completed'));
+        nextTeamLabel.text('Next Team: ' + (nextTeam || 'None'));
+
+        isMyTurn = currentTeam === userState.team_name;
+
+        updateAthleteTable();
+        teamRoster = allTeamRosters[userState.team_name] || [];
+        updateRosterTable();
+        updateAllTeamRosters();
+
+        if (!currentTeam) {
+            socket.emit('get_draft_results');
+        }
+    });
+
+    socket.on('draft_results', function (data) {
+        draftInterface.addClass('hidden');
+        draftResults.removeClass('hidden');
+
+        displayAllTeamRosters(data.team_rosters);
+        displayProjectedRankings(data.projected_rankings);
+    });
+
+    // Add event listener for kicking teams
+    $(document).on('click', '.kick-team-btn', function () {
+        var teamName = $(this).data('team-name');
+        if (confirm('Are you sure you want to remove ' + teamName + ' from the draft?')) {
+            socket.emit('kick_team', { team_name: teamName });
+        }
+    });
+
+    // Handle team kicked event
+    socket.on('team_kicked', function (data) {
+        alert('Team ' + data.team_name + ' has been removed from the draft.');
+        updateTeamList(data.teams);
     });
 
     socket.on('draft_results', function (data) {
@@ -243,9 +286,12 @@ $(document).ready(function () {
         displayAllTeamRosters(data.team_rosters);
         displayProjectedRankings(data.projected_rankings);
 
-        downloadRostersBtn.click(function () {
+        // Show download button
+        const downloadButton = $('<button>Download Rosters</button>');
+        downloadButton.click(function () {
             window.location.href = '/download_rosters';
         });
+        draftResults.append(downloadButton);
     });
 
     function makePick(athleteName) {
