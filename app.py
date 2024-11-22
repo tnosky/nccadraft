@@ -7,12 +7,20 @@ from flask import Flask, render_template, session, request, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import pandas as pd
 import random
+import os
+
+from whitenoise import WhiteNoise
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'  # Replace with a secure secret key
+app.config['SECRET_KEY'] = os.environ.get('11jWaUjKXGmi69szW9FE9rOcGr3eECauNF8YeCHC5Rc', 'RerBcfpnSMIUJX--SODVH0yU0HOv1kTL1iIU2gwaKuE')
+
+# Wrap the app with WhiteNoise
+app.wsgi_app = WhiteNoise(app.wsgi_app, root='static/')
+
 
 # Set manage_session=True to enable session management in Socket.IO
-socketio = SocketIO(app, manage_session=True)
+socketio = SocketIO(app, async_mode='eventlet', manage_session=True, cors_allowed_origins="*")
+
 
 # Load athlete data
 athletes_df = pd.read_csv('Individual_Rankings.csv')
@@ -120,4 +128,7 @@ def handle_get_draft_results():
     })
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    import os
+
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port)
