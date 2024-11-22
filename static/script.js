@@ -95,12 +95,14 @@ $(document).ready(function () {
     }
 
     function updateAthleteTable() {
-        var searchTerm = searchBar.val().toLowerCase();
-        athleteTableBody.empty();
+        var searchTerm = searchBar.val().toLowerCase(); // Get the search term and make it lowercase
+        athleteTableBody.empty(); // Clear the table before populating it again
+
+        // Filter athletes based on search term
         availableAthletes.forEach(function (athlete) {
             if (
-                athlete.Name.toLowerCase().includes(searchTerm) ||
-                athlete.Team.toLowerCase().includes(searchTerm)
+                athlete.Name.toLowerCase().includes(searchTerm) || // Match name
+                athlete.Team.toLowerCase().includes(searchTerm)    // Match team
             ) {
                 var row = $('<tr></tr>');
                 row.append('<td>' + athlete.Rank + '</td>');
@@ -108,8 +110,8 @@ $(document).ready(function () {
                 row.append('<td>' + athlete.Team + '</td>');
                 row.append('<td>' + athlete.Trend + '</td>');
 
+                // Add click/touch event for selecting an athlete
                 if (isMyTurn) {
-                    // Add click and touch event listeners for mobile compatibility
                     row.on('click touchend', function () {
                         if (confirm('Select ' + athlete.Name + '?')) {
                             makePick(athlete.Name);
@@ -117,10 +119,11 @@ $(document).ready(function () {
                     });
                 }
 
-                athleteTableBody.append(row);
+                athleteTableBody.append(row); // Add the row to the table body
             }
         });
     }
+
 
 
     function updateRosterTable() {
