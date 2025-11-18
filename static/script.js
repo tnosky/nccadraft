@@ -1,4 +1,4 @@
-let ws = new WebSocket("wss://yourserver"); 
+let ws = new WebSocket("wss://web-production-8a5ea.up.railway.app"); 
 let teamName = "";
 let isHost = false;
 let myId = null;
