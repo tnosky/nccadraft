@@ -7,9 +7,11 @@ import pandas as pd
 import random
 import uuid
 import os
+from datetime import timedelta # Imported timedelta
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '11jWaUjKXGmi69szW9FE9rOcGr3eECauNF8YeCHC5Rc')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1) # Keep session for 1 day
 
 socketio = SocketIO(app, async_mode='eventlet', manage_session=True, cors_allowed_origins="*")
 
@@ -60,6 +62,7 @@ def get_user_state(user_id):
 # Routes
 @app.route('/')
 def index():
+    session.permanent = True  # Ensure session persists across refreshes
     if 'user_id' not in session:
         session['user_id'] = str(uuid.uuid4())  # Assign a unique ID to each user
 
@@ -95,8 +98,9 @@ def handle_join_draft(data):
         emit('error', {'message': 'Team name already taken.'})
         return
 
-    # Assign the first user to join as the host
-    if host_id is None:
+    # Assign host: If no teams exist yet, the first joiner is the host.
+    # Also fallback to if host_id is None (just in case).
+    if not teams or host_id is None:
         host_id = user_id
 
     # Save user information
@@ -141,7 +145,7 @@ def send_state_update():
 
 @socketio.on('kick_team')
 def handle_kick_team(data):
-    global draft_order, pick_order, current_pick_index
+    global draft_order, pick_order, current_pick_index, host_id
     user_id = session.get('user_id')
 
     # Ensure only the host can kick a team
@@ -154,6 +158,16 @@ def handle_kick_team(data):
         # Remove team and its roster
         teams.remove(team_to_kick)
         del team_rosters[team_to_kick]
+        
+        # Find and remove the user associated with this team
+        # This is important so if they rejoin, they can pick a new team or same team
+        key_to_remove = None
+        for uid, udata in users.items():
+            if udata.get('team_name') == team_to_kick:
+                key_to_remove = uid
+                break
+        if key_to_remove:
+            del users[key_to_remove]
 
         # Update draft order and pick order
         draft_order = [team for team in draft_order if team != team_to_kick]
@@ -161,6 +175,10 @@ def handle_kick_team(data):
 
         # Adjust current_pick_index if necessary
         current_pick_index = min(current_pick_index, len(pick_order) - 1)
+
+        # Reset host if teams are empty
+        if not teams:
+            host_id = None
 
         # Notify all clients
         emit('team_kicked', {'team_name': team_to_kick}, broadcast=True)
@@ -173,6 +191,12 @@ def handle_kick_team(data):
 def handle_make_pick(data):
     global current_pick_index
     user_id = session.get('user_id')
+    
+    # Check if user exists
+    if user_id not in users:
+        emit('error', {'message': 'User state not found. Please refresh.'})
+        return
+        
     team_name = users[user_id].get("team_name")
 
     if not team_name or current_pick_index >= len(pick_order) or pick_order[current_pick_index] != team_name:
