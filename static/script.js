@@ -34,7 +34,8 @@ $(document).ready(function () {
     // Restore state on page load
     $.get('/get_state', function (data) {
         if (data.error) {
-            alert(data.error);
+            // If user not found, simply stay on join screen
+            console.log(data.error);
         } else {
             userState = data;
             initializeUserState(userState);
@@ -61,14 +62,6 @@ $(document).ready(function () {
         }
     }
 
-    function addKickButtonForHost(teamName) {
-        // Add a "Kick" button next to each team name for the host
-        if (userState.is_host) {
-            return `<button class="kick-team-btn" data-team="${teamName}">Kick</button>`;
-        }
-        return '';
-    }
-
     function updateTeamList(teams) {
         teamList.empty();
         teams.forEach(function (team) {
@@ -81,8 +74,6 @@ $(document).ready(function () {
         });
     }
 
-
-
     function updateDraftInterface(state) {
         draftStarted = state.draft_started;
         availableAthletes = state.available_athletes || [];
@@ -91,10 +82,19 @@ $(document).ready(function () {
         nextTeam = state.next_team;
 
         // Restore isMyTurn based on the current team and user's team name
-        isMyTurn = currentTeam === state.team_name;
+        // Safety check if state.team_name exists
+        if (state.team_name) {
+            isMyTurn = currentTeam === state.team_name;
+        } else {
+            isMyTurn = false;
+        }
 
         // Calculate picks away
-        var picksAway = state.pick_order.indexOf(state.team_name) - state.current_pick_index;
+        var picksAway = -1;
+        if (state.pick_order && state.team_name) {
+             picksAway = state.pick_order.indexOf(state.team_name) - state.current_pick_index;
+        }
+        
         var pickMessage = '';
         if (picksAway === 0) {
             pickMessage = 'It is Your Pick!';
@@ -155,9 +155,6 @@ $(document).ready(function () {
         });
     }
 
-
-
-
     function updateRosterTable() {
         rosterTableBody.empty();
         teamRoster.forEach(function (athlete) {
@@ -216,9 +213,16 @@ $(document).ready(function () {
     });
 
     socket.on('joined_draft', function (data) {
+        // Update local userState to prevent null errors in updateTeamList
+        if (!userState) userState = {};
+        userState.is_host = data.is_host;
+        userState.team_name = data.team_name;
+
         teamNameEntry.addClass('hidden');
         waitingRoom.removeClass('hidden');
-        updateTeamList(data.teams);
+        
+        // Update team list immediately
+        updateTeamList(data.teams || []);
 
         if (data.is_host) {
             startDraftBtn.removeClass('hidden'); // Show "Start Draft" button for host
@@ -251,11 +255,14 @@ $(document).ready(function () {
         currentTeamLabel.text('Current Team: ' + (currentTeam || 'Draft Completed'));
         nextTeamLabel.text('Next Team: ' + (nextTeam || 'None'));
 
-        isMyTurn = currentTeam === userState.team_name;
+        // Safety check
+        if (userState && userState.team_name) {
+             isMyTurn = currentTeam === userState.team_name;
+             teamRoster = allTeamRosters[userState.team_name] || [];
+             updateRosterTable();
+        }
 
         updateAthleteTable();
-        teamRoster = allTeamRosters[userState.team_name] || [];
-        updateRosterTable();
         updateAllTeamRosters();
 
         if (!currentTeam) {
@@ -269,6 +276,14 @@ $(document).ready(function () {
 
         displayAllTeamRosters(data.team_rosters);
         displayProjectedRankings(data.projected_rankings);
+
+        // Show download button - ensure we don't duplicate if event fires twice
+        $('#download-rosters-btn').remove();
+        const downloadButton = $('<button id="download-rosters-btn">Download Rosters</button>');
+        downloadButton.click(function () {
+            window.location.href = '/download_rosters';
+        });
+        draftResults.append(downloadButton);
     });
 
     // Add event listener for kicking teams
@@ -281,38 +296,31 @@ $(document).ready(function () {
 
     // Handle team kicked event
     socket.on('team_kicked', function (data) {
-        alert('Team ' + data.team_name + ' has been removed from the draft.');
-        updateTeamList(data.teams);
+        // If I was kicked, alert and reload to reset
+        if (userState && userState.team_name === data.team_name) {
+            alert('You have been removed from the draft.');
+            location.reload();
+        } else {
+            // Only alert if explicitly needed, or just update UI
+            // alert('Team ' + data.team_name + ' has been removed.');
+        }
+        // The server sends state_update which refreshes the lists, so manual updateTeamList here isn't strictly necessary if update_teams is broadcast, but let's be safe.
     });
-
-    socket.on('draft_results', function (data) {
-        draftInterface.addClass('hidden');
-        draftResults.removeClass('hidden');
-
-        displayAllTeamRosters(data.team_rosters);
-        displayProjectedRankings(data.projected_rankings);
-
-        // Show download button
-        const downloadButton = $('<button>Download Rosters</button>');
-        downloadButton.click(function () {
-            window.location.href = '/download_rosters';
-        });
-        draftResults.append(downloadButton);
+    
+    // Add this listener for errors
+    socket.on('error', function(data) {
+        alert(data.message);
     });
 
     function makePick(athleteName) {
         if (isMyTurn) {
             socket.emit('make_pick', { athlete_name: athleteName }, function (response) {
-                if (response.success) {
-                    allTeamRosters = response.team_rosters;
-                    updateAllTeamRosters();
-                } else {
+                if (response && response.error) {
                     alert(response.error);
                 }
             });
         }
     }
-
 
     function displayAllTeamRosters(teamRosters) {
         allTeamRostersDiv.empty();
