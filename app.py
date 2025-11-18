@@ -7,17 +7,30 @@ import pandas as pd
 import random
 import uuid
 import os
-from datetime import timedelta # Imported timedelta
+from datetime import timedelta
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '11jWaUjKXGmi69szW9FE9rOcGr3eECauNF8YeCHC5Rc')
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1) # Keep session for 1 day
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)  # Keep session for 1 day
 
 socketio = SocketIO(app, async_mode='eventlet', manage_session=True, cors_allowed_origins="*")
 
 # Load athlete data
-athletes_df = pd.read_csv('Individual_Rankings.csv')
-available_athletes = athletes_df.to_dict('records')
+try:
+    athletes_df = pd.read_csv('Individual_Rankings.csv')
+    
+    # Map '2024 Finish' to 'Trend' to match the existing frontend code
+    if '2024 Finish' in athletes_df.columns:
+        athletes_df.rename(columns={'2024 Finish': 'Trend'}, inplace=True)
+
+    # CRITICAL: Fill missing values (NaN) with empty strings.
+    # JSON cannot serialize NaN, which causes the list to disappear if not fixed.
+    athletes_df = athletes_df.fillna('')
+    
+    available_athletes = athletes_df.to_dict('records')
+except Exception as e:
+    print(f"Error loading CSV: {e}")
+    available_athletes = []
 
 # Persistent storage for draft state
 users = {}  # Maps user_id to user-specific information
@@ -99,7 +112,6 @@ def handle_join_draft(data):
         return
 
     # Assign host: If no teams exist yet, the first joiner is the host.
-    # Also fallback to if host_id is None (just in case).
     if not teams or host_id is None:
         host_id = user_id
 
@@ -160,7 +172,6 @@ def handle_kick_team(data):
         del team_rosters[team_to_kick]
         
         # Find and remove the user associated with this team
-        # This is important so if they rejoin, they can pick a new team or same team
         key_to_remove = None
         for uid, udata in users.items():
             if udata.get('team_name') == team_to_kick:
@@ -192,11 +203,10 @@ def handle_make_pick(data):
     global current_pick_index
     user_id = session.get('user_id')
     
-    # Check if user exists
     if user_id not in users:
         emit('error', {'message': 'User state not found. Please refresh.'})
         return
-        
+
     team_name = users[user_id].get("team_name")
 
     if not team_name or current_pick_index >= len(pick_order) or pick_order[current_pick_index] != team_name:
